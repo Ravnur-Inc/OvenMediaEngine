@@ -412,9 +412,26 @@ namespace mpegts
 			logtw("Now it only supports one section for PAT and PMT");
 		}
 
-		_pat->_program_num = parser->ReadBytes<uint16_t>();
-		_pat->_reserved_bits2 = parser->ReadBits<uint8_t>(3);
-		_pat->_program_map_pid = parser->ReadBits<uint16_t>(13);
+		while (parser->BytesRemained() > 4)
+    	{
+			uint16_t program_num = parser->ReadBytes<uint16_t>();
+			_pat->_reserved_bits2 = parser->ReadBits<uint8_t>(3);
+        	uint16_t program_pid = parser->ReadBits<uint16_t>(13);
+			if (program_num == 0x0000) {
+				logtd("Found NIT with PID: %d", program_pid);
+			}
+			else
+			{
+				logtd("Found Program #%d with PMT PID: %d", program_num, program_pid);
+				_pat->_program_num = program_num;
+				_pat->_program_map_pid = program_pid;
+			}
+		}
+
+		if (_pat->_program_num == 0) {
+			logtw("Parsed PAT but no valid Program PMT was found (only NIT or empty).");
+			return false;
+    	}
 
 		return true;
 	}
