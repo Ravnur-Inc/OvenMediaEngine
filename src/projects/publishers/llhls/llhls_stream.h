@@ -224,4 +224,6 @@ private:
 
 	std::map<int32_t, std::shared_ptr<webvtt::Packager>> _vtt_packagers;
 	mutable std::shared_mutex _vtt_packagers_lock;
+
+	bool CreateOriginSessionPool();
 };

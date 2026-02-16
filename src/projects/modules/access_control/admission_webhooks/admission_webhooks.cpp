@@ -47,6 +47,25 @@ AdmissionWebhooks::ErrCode AdmissionWebhooks::GetErrCode() const
 	return _err_code;
 }
 
+ov::String AdmissionWebhooks::GetErrCodeString() const
+{
+	switch (_err_code)
+	{
+	case ErrCode::ALLOWED:
+		return "Allowed";
+	case ErrCode::DENIED:
+		return "Denied";
+	case ErrCode::INVALID_DATA_FORMAT:
+		return "InvalidDataFormat";
+	case ErrCode::INVALID_STATUS_CODE:
+		return "InvalidStatusCode";
+	case ErrCode::INTERNAL_ERROR:
+		return "InternalError";
+	default:
+		return "Unknown";
+	}
+}
+
 ov::String AdmissionWebhooks::GetErrReason() const
 {
 	return _err_reason;

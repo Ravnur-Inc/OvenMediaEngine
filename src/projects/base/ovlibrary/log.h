@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include "./format_string.h"
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -127,6 +129,18 @@ extern "C"
 #define logte(format, ...) loge(OV_LOG_TAG, format, ##__VA_ARGS__)
 #define logtc(format, ...) logc(OV_LOG_TAG, format, ##__VA_ARGS__)
 
+//--------------------------------------------------------------------
+// Logging APIs with additional prefix
+// (`OV_LOG_PREFIX_FORMAT` and `OV_LOG_PREFIX_VALUE` must be defined.)
+//--------------------------------------------------------------------
+#define logap(format, ...) logtp(OV_LOG_PREFIX_FORMAT format, OV_LOG_PREFIX_VALUE, ##__VA_ARGS__)
+#define logat(format, ...) logtt(OV_LOG_PREFIX_FORMAT format, OV_LOG_PREFIX_VALUE, ##__VA_ARGS__)
+#define logad(format, ...) logtd(OV_LOG_PREFIX_FORMAT format, OV_LOG_PREFIX_VALUE, ##__VA_ARGS__)
+#define logai(format, ...) logti(OV_LOG_PREFIX_FORMAT format, OV_LOG_PREFIX_VALUE, ##__VA_ARGS__)
+#define logaw(format, ...) logtw(OV_LOG_PREFIX_FORMAT format, OV_LOG_PREFIX_VALUE, ##__VA_ARGS__)
+#define logae(format, ...) logte(OV_LOG_PREFIX_FORMAT format, OV_LOG_PREFIX_VALUE, ##__VA_ARGS__)
+#define logac(format, ...) logtc(OV_LOG_PREFIX_FORMAT format, OV_LOG_PREFIX_VALUE, ##__VA_ARGS__)
+
 #define stat_log(type, format, ...) ov_stat_log_internal(type, OVLogLevelInformation, "STAT", __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ##__VA_ARGS__)
 
 	/// Primary filter rule applied to all logs
@@ -153,7 +167,7 @@ extern "C"
 	bool ov_log_set_enable(const char *tag_regex, OVLogLevel level, bool is_enabled);
 	bool ov_log_get_enabled(const char *tag, OVLogLevel level);
 
-	void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...);
+	void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...) OV_PRINTF_FORMAT(6, 7);
 	void ov_log_set_path(const char *log_path);
 	const char *ov_log_get_path();
 

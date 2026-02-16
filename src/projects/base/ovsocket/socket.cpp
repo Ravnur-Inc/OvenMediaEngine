@@ -23,12 +23,8 @@
 #include "socket_private.h"
 #include "socket_utilities.h"
 
-#define logap(format, ...) logtp("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-#define logat(format, ...) logtt("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-#define logai(format, ...) logti("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-#define logaw(format, ...) logtw("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-#define logae(format, ...) logte("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-#define logac(format, ...) logtc("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+#define OV_LOG_PREFIX_FORMAT "[#%d] [%p] "
+#define OV_LOG_PREFIX_VALUE (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this
 
 // Debugging purpose
 #include "socket_profiler.h"
@@ -42,8 +38,8 @@ namespace ov
 	public:
 		void OnConnected(const std::shared_ptr<const SocketError> &error) override
 		{
+			std::atomic_store_explicit(&_error, error, std::memory_order_release);
 			_epoll_event.SetEvent();
-			_error = error;
 		}
 
 		void OnReadable() override
@@ -61,7 +57,7 @@ namespace ov
 
 		std::shared_ptr<const SocketError> GetError() const
 		{
-			return _error;
+			return std::atomic_load_explicit(&_error, std::memory_order_acquire);
 		}
 
 	protected:
@@ -105,7 +101,7 @@ namespace ov
 			return false;
 		}
 
-		logat("Trying to create new socket (type: %d)...", type);
+		logat("Trying to create new socket (type: %d)...", ToUnderlyingType(type));
 
 		switch (type)
 		{
@@ -174,8 +170,14 @@ namespace ov
 
 		// An error occurred - reset all variables
 		{
+			SocketState state;
+			{
+				std::lock_guard lock_guard(_state_mutex);
+				state = _state;
+			}
+
 			std::lock_guard lock_guard(_dispatch_queue_lock);
-			if (CloseInternal(_state))
+			if (CloseInternal(state))
 			{
 				SetState(SocketState::Closed);
 			}
@@ -229,7 +231,7 @@ namespace ov
 				break;
 
 			default:
-				OV_ASSERT(false, "Invalid socket type: %d", GetType());
+				OV_ASSERT(false, "Invalid socket type: %d", ToUnderlyingType(GetType()));
 				return false;
 		}
 
@@ -457,7 +459,7 @@ namespace ov
 			}
 
 			default:
-				OV_ASSERT(false, "Invalid socket type: %d", GetType());
+				OV_ASSERT(false, "Invalid socket type: %d", ToUnderlyingType(GetType()));
 				return false;
 		}
 
@@ -499,7 +501,7 @@ namespace ov
 			}
 
 			default:
-				OV_ASSERT(false, "Invalid socket type: %d", GetType());
+				OV_ASSERT(false, "Invalid socket type: %d", ToUnderlyingType(GetType()));
 				break;
 		}
 
@@ -541,7 +543,7 @@ namespace ov
 			}
 
 			default:
-				OV_ASSERT(false, "Invalid socket type: %d", GetType());
+				OV_ASSERT(false, "Invalid socket type: %d", ToUnderlyingType(GetType()));
 				break;
 		}
 
@@ -786,16 +788,19 @@ namespace ov
 
 	bool Socket::IsClosable() const
 	{
-		return CheckFlag(_state, SOCKET_STATE_CLOSABLE);
+		return CheckFlag(GetState(), SOCKET_STATE_CLOSABLE);
 	}
 
 	SocketState Socket::GetState() const
 	{
+		std::lock_guard lock_guard(_state_mutex);
 		return _state;
 	}
 
 	void Socket::SetState(SocketState state)
 	{
+		std::lock_guard lock_guard(_state_mutex);
+
 		logat("Socket state is changed: %s => %s",
 			  StringFromSocketState(_state),
 			  StringFromSocketState(state));
@@ -1170,7 +1175,7 @@ namespace ov
 				}
 
 				STATS_COUNTER_INCREASE_ERROR();
-				logaw("Could not send data: %zd (%s)", sent, SrtError::CreateErrorFromSrt()->What());
+				logaw("Could not send data: %d (%s)", sent, SrtError::CreateErrorFromSrt()->What());
 				return sent;
 			}
 
@@ -2192,7 +2197,7 @@ namespace ov
 		return String::FormatString(
 			"<%s: %p, #%d, %s, %s, %s%s>",
 			class_name, this,
-			GetNativeHandle(), StringFromSocketState(_state),
+			GetNativeHandle(), StringFromSocketState(GetState()),
 			StringFromSocketType(GetType()),
 			StringFromBlockingMode(_blocking_mode),
 			extra.CStr());

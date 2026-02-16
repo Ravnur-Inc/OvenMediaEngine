@@ -14,6 +14,8 @@ namespace info
 		_stream_info  = std::make_shared<info::Stream>(stream);
 		_created_time = std::chrono::system_clock::now();
 		SetIds(stream);
+
+		UpdateNamePath();
 	}
 
 	Session::Session(const info::Stream &stream, session_id_t session_id)
@@ -22,6 +24,8 @@ namespace info
 		_stream_info  = std::make_shared<info::Stream>(stream);
 		_created_time = std::chrono::system_clock::now();
 		SetIds(stream);
+
+		UpdateNamePath();
 	}
 
 	Session::Session(const info::Stream &stream, const Session &T)
@@ -30,6 +34,8 @@ namespace info
 		_stream_info  = std::make_shared<info::Stream>(stream);
 		_created_time = std::chrono::system_clock::now();
 		SetIds(stream);
+
+		UpdateNamePath();
 	}
 
 	session_id_t Session::GetId() const
@@ -41,15 +47,38 @@ namespace info
 	{
 		if (_stream_info == nullptr)
 		{
+			OV_ASSERT2(false);
 			return "";
 		}
 
 		return ov::String::FormatString("%s/%d", _stream_info->GetUUID().CStr(), GetId());
 	}
 
+	void Session::UpdateNamePath()
+	{
+		if (_stream_info == nullptr)
+		{
+			OV_ASSERT2(false);
+			return;
+		}
+
+		auto name_path = _stream_info->GetNamePath().Append("%s(%u)", _name.value_or("[unnamed]").CStr(), _id);
+		{
+			std::lock_guard lock_guard(_name_path_mutex);
+			_name_path = name_path;
+		}
+	}
+
+	NamePath Session::GetNamePath() const
+	{
+		std::lock_guard lock_guard(_name_path_mutex);
+		return _name_path;
+	}
+
 	void Session::SetName(const ov::String &name)
 	{
 		_name = name;
+		UpdateNamePath();
 	}
 
 	const std::optional<ov::String> &Session::GetName() const

@@ -97,7 +97,7 @@ void HlsSession::UpdateLastRequest(uint32_t connection_id)
 	std::lock_guard<std::shared_mutex> lock(_last_request_time_guard);
 	_last_request_time[connection_id] = ov::Clock::NowMSec();
 
-	logtt("TsSession(%u) : Request updated from %u : size(%d)", GetId(), connection_id, _last_request_time.size());
+	logtt("TsSession(%u) : Request updated from %u : size(%zu)", GetId(), connection_id, _last_request_time.size());
 }
 
 uint64_t HlsSession::GetLastRequestTime(uint32_t connection_id) const
@@ -233,8 +233,11 @@ bool HlsSession::ParseFileName(const ov::String &file_name, RequestType &type, o
 	// * Segment File
 	// http[s]://<host>:<port>/<application_name>/<stream_name>/seg_<variant_name>_<number>_hls.ts
 
+	// * VTT File
+	// http[s]://<host>:<port>/<application_name>/<stream_name>/seg_<variant_name>_<number>_hls.vtt
+
 	auto name_ext_items = file_name.Split(".");
-	if (name_ext_items.size() < 2 || (name_ext_items[1] != "m3u8" && name_ext_items[1] != "ts"))
+	if (name_ext_items.size() < 2 || (name_ext_items[1] != "m3u8" && name_ext_items[1] != "ts" && name_ext_items[1] != "vtt"))
 	{
 		return false;
 	}
@@ -278,7 +281,7 @@ bool HlsSession::ParseFileName(const ov::String &file_name, RequestType &type, o
 	}
 	// Segment File
 	// seg_<variant_name>_<number>_hls.ts
-	else if (ext == "ts" && name_items[0] == "seg")
+	else if ((ext == "ts" && name_items[0] == "seg") || (ext == "vtt" && name_items[0] == "seg"))
 	{
 		type = RequestType::Segment;
 
@@ -389,13 +392,42 @@ void HlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> 
 		return;
 	}
 
+	auto file_name = exchange->GetRequest()->GetParsedUri()->File();
+	auto file_items = file_name.Split(".");
+	if (file_items.size() < 2)
+	{
+		logte("TsSession::ResponseSegment - Invalid file name(%s)", file_name.CStr());
+		auto response = exchange->GetResponse();
+		response->SetStatusCode(http::StatusCode::BadRequest);
+		ResponseData(exchange);
+		return;
+	}
+	auto ext = file_items[1];
+	ov::String content_type;
+	if (ext == "ts")
+	{
+		content_type = "video/mp2t";
+	}
+	else if (ext == "vtt")
+	{
+		content_type = "text/vtt";
+	}
+	else
+	{
+		logte("TsSession::ResponseSegment - Invalid segment file extension(%s)", ext.CStr());
+		auto response = exchange->GetResponse();
+		response->SetStatusCode(http::StatusCode::BadRequest);
+		ResponseData(exchange);
+		return;
+	}
+
 	auto response = exchange->GetResponse();
 
 	auto [result, segment] = stream->GetSegmentData(variant_name, number);
 	if (result == HlsStream::RequestResult::Success)
 	{
 		response->SetStatusCode(http::StatusCode::OK);
-		response->SetHeader("Content-Type", "video/mp2t");
+		response->SetHeader("Content-Type", content_type);
 		response->AppendData(segment);
 	}
 	else if (result == HlsStream::RequestResult::NotFound)

@@ -433,7 +433,7 @@ bool IcePort::RemoveSession(session_id_t session_id)
 		}
 	}
 
-	logti("Removed session(%u) from ICEPort | ice_seesions_with_id count(%d) ice_sessions_with_ufrag(%d) ice_sessions_with_address_pair(%d) ", session_id, ice_sessions_with_id_size, ice_sessions_with_ufrag_size, ice_sessions_with_address_pair_size);
+	logti("Removed session(%u) from ICEPort | ice_seesions_with_id count(%zu) ice_sessions_with_ufrag(%zu) ice_sessions_with_address_pair(%zu) ", session_id, ice_sessions_with_id_size, ice_sessions_with_ufrag_size, ice_sessions_with_address_pair_size);
 
 	return true;
 }
@@ -821,8 +821,8 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 			logtt("Bad Packet - TURN Server cannot receive the Stun Data method(%s)", remote->ToString().CStr());
 			break;
 		default:
-			OV_ASSERT(false, "Not implemented method: %d", message.GetMethod());
-			logtw("Unknown method: %d", message.GetMethod());
+			OV_ASSERT(false, "Not implemented method: %d", ov::ToUnderlyingType(message.GetMethod()));
+			logtw("Unknown method: %d", ov::ToUnderlyingType(message.GetMethod()));
 			break;
 	}
 }
@@ -1058,7 +1058,7 @@ bool IcePort::OnReceivedStunBindingResponse(const std::shared_ptr<ov::Socket> &r
 	// Erase ended transction item
 	RemoveTransaction(transaction_id_key);
 
-	logtt("Receive stun binding response from %s, table size(%d)", address_pair.ToString().CStr(), _binding_requests_with_transaction_id.size());
+	logtt("Receive stun binding response from %s, table size(%zu)", address_pair.ToString().CStr(), _binding_requests_with_transaction_id.size());
 
 	if (message.CheckIntegrity(ice_session->GetLocalSdp()->GetIcePwd()) == false)
 	{

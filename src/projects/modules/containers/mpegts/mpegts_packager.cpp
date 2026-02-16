@@ -50,7 +50,7 @@ namespace mpegts
 		return true;
 	}
 
-    uint64_t Packager::GetNextSegmentId()
+    int64_t Packager::GetNextSegmentId()
     {
         return _last_segment_id ++;
     }
@@ -134,7 +134,7 @@ namespace mpegts
 		CreateSegmentIfReady(true);
 	}
 
-	std::shared_ptr<Segment> Packager::GetSegment(uint64_t segment_id) const
+	std::shared_ptr<base::modules::Segment> Packager::GetSegment(int64_t segment_id) const
 	{
 		{
 			std::shared_lock<std::shared_mutex> lock(_segments_guard);
@@ -166,7 +166,35 @@ namespace mpegts
 		return nullptr;
 	}
 
-	std::shared_ptr<const ov::Data> Packager::GetSegmentData(uint64_t segment_id) const
+	std::shared_ptr<base::modules::Segment> Packager::GetLastSegment() const
+	{
+		std::shared_lock<std::shared_mutex> lock(_segments_guard);
+		if (_segments.empty())
+		{
+			return nullptr;
+		}
+
+		return _segments.rbegin()->second;
+	}
+
+	uint64_t Packager::GetSegmentCount() const
+	{
+		std::shared_lock<std::shared_mutex> lock(_segments_guard);
+		return static_cast<uint64_t>(_segments.size());
+	}
+
+	int64_t Packager::GetLastSegmentNumber() const
+	{
+		std::shared_lock<std::shared_mutex> lock(_segments_guard);
+		if (_segments.empty())
+		{
+			return -1;
+		}
+
+		return _segments.rbegin()->first;
+	}
+
+	std::shared_ptr<const ov::Data> Packager::GetSegmentData(int64_t segment_id) const
 	{
 		auto segment = GetSegment(segment_id);
 		if (segment == nullptr)
@@ -278,8 +306,8 @@ namespace mpegts
 				{
 					auto duration_msec = cue_out_event->GetDurationMsec();
 					auto main_track = GetMediaTrack(_main_track_id);
-					int64_t cue_in_timestamp = (main_segment_end_timestamp - 1) + (static_cast<double>(duration_msec) / 1000.0 * main_track->GetTimeBase().GetTimescale());
-					int64_t cue_in_timestamp_ms = (static_cast<double>(main_segment_base_timestamp - 1) / main_track->GetTimeBase().GetTimescale() * 1000.0) + duration_msec;
+					int64_t cue_in_timestamp = (main_segment_end_timestamp - 1) + (static_cast<double>(duration_msec) / 1000.0 * mpegts::TIMEBASE_DBL);
+					int64_t cue_in_timestamp_ms = (static_cast<double>(main_segment_base_timestamp - 1) / mpegts::TIMEBASE_DBL * 1000.0) + duration_msec;
 
 					auto cue_in_marker = Marker::CreateMarker(cmn::BitstreamFormat::CUE, cue_in_timestamp, cue_in_timestamp_ms, CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize());
 					if (cue_in_marker != nullptr)
@@ -676,8 +704,8 @@ namespace mpegts
 		return ov::String::FormatString("%s/%s/%s", _config.dvr_storage_path.CStr(), _config.stream_id_meta.CStr(), _packager_id.CStr());
 	}
 
-	ov::String Packager::GetSegmentFilePath(uint64_t segment_id) const
+	ov::String Packager::GetSegmentFilePath(int64_t segment_id) const
 	{
-		return ov::String::FormatString("%s/segment_%u_hls.ts", GetDvrStoragePath().CStr(), segment_id);
+		return ov::String::FormatString("%s/segment_%" PRId64 "_hls.ts", GetDvrStoragePath().CStr(), segment_id);
 	}
 }

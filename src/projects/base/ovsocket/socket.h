@@ -513,6 +513,7 @@ namespace ov
 		SocketWrapper _socket;
 		SocketFamily _family;
 
+		mutable std::mutex _state_mutex;
 		SocketState _state = SocketState::Closed;
 
 		BlockingMode _blocking_mode = BlockingMode::Blocking;

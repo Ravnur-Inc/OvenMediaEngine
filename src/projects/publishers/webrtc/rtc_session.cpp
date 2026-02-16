@@ -296,7 +296,7 @@ bool RtcSession::RequestChangeRendition(SwitchOver switch_over)
 
 	if (next_rendition != nullptr)
 	{
-		logtt("Change rendition - EstimatedBandwidth(%f) CurrentRendition(%s - %lld) NextRendition(%s - %lld)",
+		logtt("Change rendition - EstimatedBandwidth(%f) CurrentRendition(%s - %" PRIu64 ") NextRendition(%s - %" PRIu64 ")",
 			  _estimated_bitrates, _current_rendition->GetName().CStr(), _current_rendition->GetBitrates(), next_rendition->GetName().CStr(), next_rendition->GetBitrates());
 
 		_next_rendition = next_rendition;
@@ -379,7 +379,7 @@ void RtcSession::OnMessageReceived(const std::any &message)
 
 	_received_bytes += data->GetLength();
 
-	logtt("Received %u bytes", _received_bytes);
+	logtt("Received %" PRIu64 " bytes", _received_bytes);
 
 	// RTP_RTCP -> SRTP -> DTLS -> Edge Node(RtcSession)
 	SendDataToPrevNode(data);
@@ -824,7 +824,7 @@ bool RtcSession::ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info)
 			_bitrate_estimate_watch.Update();
 			ChangeRenditionIfNeeded();
 
-			logtt("Estimated Bandwidth(%f) TotalSentBytes(%u) TotalSentSeconds(%f)", static_cast<double>(_total_sent_bytes * 8) / _total_sent_seconds, _total_sent_bytes, _total_sent_seconds);
+			logtt("Estimated Bandwidth(%f) TotalSentBytes(%" PRIu64 ") TotalSentSeconds(%f)", static_cast<double>(_total_sent_bytes * 8) / _total_sent_seconds, _total_sent_bytes, _total_sent_seconds);
 
 			_total_sent_seconds = 0;
 			_total_sent_bytes	= 0;
@@ -838,7 +838,7 @@ bool RtcSession::ProcessRemb(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
 	auto remb = std::static_pointer_cast<REMB>(rtcp_info);
 
-	logtt("REMB Estimated Bandwidth(%lld)", remb->GetBitrateBps());
+	logtt("REMB Estimated Bandwidth(%" PRId64 ")", remb->GetBitrateBps());
 
 	_previous_estimated_bitrate = _estimated_bitrates;
 	_estimated_bitrates			= remb->GetBitrateBps();

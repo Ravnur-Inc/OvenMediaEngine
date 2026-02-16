@@ -841,7 +841,7 @@ namespace ocst
 
 		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
 		auto ovt_url = ov::String::FormatString("%s/%s", vhost->GetOriginBaseUrl().CStr(), app_stream_name.CStr());
-		if (client->Register(app_stream_name, ovt_url) == true)
+		if (client->RequestRegister(app_stream_name, ovt_url) == true)
 		{
 			return CommonErrorCode::SUCCESS;
 		}
@@ -873,7 +873,7 @@ namespace ocst
 
 		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
 
-		if (client->Unregister(app_stream_name) == true)
+		if (client->RequestUnregister(app_stream_name) == true)
 		{
 			return CommonErrorCode::SUCCESS;
 		}
@@ -980,7 +980,7 @@ namespace ocst
 			}
 		}
 
-		logtw("Provider (%d) is not found for scheme %s", type, scheme.CStr());
+		logtw("Provider (%d) is not found for scheme %s", ov::ToUnderlyingType(type), scheme.CStr());
 		return nullptr;
 	}
 
@@ -991,7 +991,7 @@ namespace ocst
 
 		OV_ASSERT((provider == nullptr) || (provider_module != nullptr),
 				  "Provider (%d) must inherit from ProviderModuleInterface",
-				  provider->GetProviderType());
+				  ov::ToUnderlyingType(provider->GetProviderType()));
 
 		return provider_module;
 	}
