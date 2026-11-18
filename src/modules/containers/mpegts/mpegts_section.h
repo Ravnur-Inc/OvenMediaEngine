@@ -32,9 +32,9 @@ namespace mpegts
 		uint8_t 	_section_number = 0U;		  	// 8 bits, starts from 0
 		uint8_t 	_last_section_number = 0U;	 	// 8 bits
 
-		uint16_t	_program_num; // 16bits
+		uint16_t	_program_num = 0U; // 16bits, 0 until ParsePat finds a program (0 is the NIT)
 		uint8_t		_reserved_bits2 = 0x07; // 3bits (0x07)
-		uint16_t	_program_map_pid; // associated PMT
+		uint16_t	_program_map_pid = 0U; // associated PMT
 	};
 
 	/*
